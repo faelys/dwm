@@ -99,6 +99,8 @@ static const Key keys[] = {
 	{ MODKEY|ControlMask,           XK_period, swapmon,        {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_comma,  swapmonvisible, {.i = -1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_period, swapmonvisible, {.i = +1 } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
