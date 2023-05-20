@@ -475,7 +475,7 @@ buttonpress(XEvent *e)
 	if ((m = wintomon(ev->window)) && m != selmon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
-		focus(NULL);
+		focus(getclientundermouse());
 	}
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
@@ -627,8 +627,8 @@ configurenotify(XEvent *e)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
 				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
 			}
-			focus(NULL);
 			arrange(NULL);
+			focus(getclientundermouse());
 		}
 	}
 }
@@ -1312,7 +1312,7 @@ motionnotify(XEvent *e)
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
-		focus(NULL);
+		focus(getclientundermouse());
 	}
 	mon = m;
 }
@@ -1373,7 +1373,7 @@ movemouse(const Arg *arg)
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
-		focus(NULL);
+		focus(getclientundermouse());
 	}
 }
 
@@ -1575,7 +1575,7 @@ resizemouse(const Arg *arg)
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
-		focus(NULL);
+		focus(getclientundermouse());
 	}
 }
 
@@ -1737,8 +1737,8 @@ sendmon(Client *c, Monitor *m)
 	c->y = c->mon->my + (c->mon->mh - HEIGHT(c)) / 2;
 	attachbottom(c);
 	attachstack(c);
-	focus(NULL);
 	arrange(NULL);
+	focus(getclientundermouse());
 }
 
 void
@@ -2274,8 +2274,8 @@ tag(const Arg *arg)
 {
 	if (selmon->sel && arg->ui & TAGMASK) {
 		selmon->sel->tags = arg->ui & TAGMASK;
-		focus(NULL);
 		arrange(selmon);
+		focus(getclientundermouse());
 	}
 }
 
@@ -2353,13 +2353,13 @@ togglescratch(const Arg *arg)
 		unsigned int newtagset = selmon->tagset[selmon->seltags] ^ scratchtag;
 		if (newtagset) {
 			selmon->tagset[selmon->seltags] = newtagset;
-			focus(NULL);
 			arrange(selmon);
 		}
 		if (ISVISIBLE(c)) {
 			focus(c);
 			restack(selmon);
-		}
+		} else
+			focus(getclientundermouse());
 	} else
 		spawn(arg);
 }
@@ -2374,8 +2374,8 @@ toggletag(const Arg *arg)
 	newtags = selmon->sel->tags ^ (arg->ui & TAGMASK);
 	if (newtags) {
 		selmon->sel->tags = newtags;
-		focus(NULL);
 		arrange(selmon);
+		focus(getclientundermouse());
 	}
 }
 
@@ -2410,8 +2410,8 @@ toggleview(const Arg *arg)
 		if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 			togglebar(NULL);
 
-		focus(NULL);
 		arrange(selmon);
+		focus(getclientundermouse());
 	}
 }
 
@@ -2743,8 +2743,8 @@ view(const Arg *arg)
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
-	focus(NULL);
 	arrange(selmon);
+	focus(getclientundermouse());
 }
 
 void
@@ -2884,6 +2884,8 @@ focusmaster(const Arg *arg)
 
 	c = nexttiled(selmon->clients);
 
-	if (c)
+	if (c) {
 		focus(c);
+		restack(selmon);
+	}
 }
