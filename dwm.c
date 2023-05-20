@@ -218,6 +218,7 @@ static void spawn(const Arg *arg);
 static void swapclient(const Arg *arg);
 static void swapfocus(const Arg *arg);
 static void swapmon(const Arg *arg);
+static void swapmonvisible(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
@@ -2050,6 +2051,160 @@ swapmon(const Arg *arg)
 	arrange(selmon);
 	focus(targetmon->sel);
 	arrange(targetmon);
+}
+
+void
+swapmonvisible(const Arg *arg)
+{
+	Client **tc, *c;
+	Client *firstnew = NULL;
+	Client **dest;
+	Client *selc = selmon->sel;
+	Monitor *targetmon;
+	unsigned int tagset = selmon->tagset[selmon->seltags];
+
+	if (!mons->next)
+		return;
+
+	targetmon = dirtomon(arg->i);
+
+	/* Move visible clients on selected screen to the target */
+
+	for (dest = &targetmon->clients; *dest; dest = &(*dest)->next);
+
+	tc = &selmon->clients;
+	while (*tc) {
+		c = *tc;
+
+		if (c->tags & tagset) {
+			if (c == selmon->sel) {
+				unfocus(c, 1);
+			}
+
+			if (!firstnew) firstnew = c;
+			c->mon = targetmon;
+			*tc = c->next;
+			c->next = *dest;
+			*dest = c;
+			dest = &c->next;
+		} else {
+			tc = &(*tc)->next;
+		}
+	}
+
+	/* Move matching clients on target back */
+
+	for (dest = &selmon->clients; *dest; dest = &(*dest)->next);
+
+	tc = &targetmon->clients;
+	while (*tc != firstnew) {
+		c = *tc;
+
+		if (c->tags & tagset) {
+			if (c == targetmon->sel) {
+				unfocus(c, 0);
+			}
+
+			c->mon = selmon;
+			*tc = c->next;
+			c->next = *dest;
+			*dest = c;
+			dest = &c->next;
+		} else {
+			tc = &(*tc)->next;
+		}
+	}
+
+	/* Move client stack from selected to target */
+
+	dest = &targetmon->stack;
+	tc = &selmon->stack;
+
+	while (*tc) {
+		c = *tc;
+
+		if (c->tags & tagset) {
+			*tc = c->snext;
+			c->snext = *dest;
+			*dest = c;
+			dest = &c->snext;
+		} else {
+			tc = &(*tc)->snext;
+		}
+	}
+
+	/* Move client stack from target to selected */
+
+	tc = dest;
+	dest = &selmon->stack;
+
+	while (*tc) {
+		c = *tc;
+
+		if (c->tags & tagset) {
+			*tc = c->snext;
+			c->snext = *dest;
+			*dest = c;
+			dest = &c->snext;
+		} else {
+			tc = &(*tc)->snext;
+		}
+	}
+
+	/* Swap pertag data if only a single tag is visible */
+
+	if (selmon->pertag->curtag > 0 &&
+	    1 << (selmon->pertag->curtag - 1) == tagset) {
+		unsigned int curtag = selmon->pertag->curtag;
+		selmon->pertag->nmasters[curtag] = targetmon->pertag->nmasters[curtag];
+		selmon->pertag->mfacts[curtag] = targetmon->pertag->mfacts[curtag];
+		selmon->pertag->sellts[curtag] = targetmon->pertag->sellts[curtag];
+		selmon->pertag->ltidxs[curtag][0] = targetmon->pertag->ltidxs[curtag][0];
+		selmon->pertag->ltidxs[curtag][1] = targetmon->pertag->ltidxs[curtag][1];
+		selmon->pertag->showbars[curtag] = targetmon->pertag->showbars[curtag];
+
+		targetmon->pertag->nmasters[curtag] = selmon->nmaster;
+		targetmon->pertag->mfacts[curtag] = selmon->mfact;
+		targetmon->pertag->sellts[curtag] = selmon->sellt;
+		targetmon->pertag->ltidxs[curtag][0] = selmon->lt[0];
+		targetmon->pertag->ltidxs[curtag][1] = selmon->lt[1];
+		targetmon->pertag->showbars[curtag] = selmon->showbar;
+
+		selmon->nmaster = selmon->pertag->nmasters[curtag];
+		selmon->mfact = selmon->pertag->mfacts[curtag];
+		selmon->sellt = selmon->pertag->sellts[curtag];
+		selmon->lt[0] = selmon->pertag->ltidxs[curtag][0];
+		selmon->lt[1] = selmon->pertag->ltidxs[curtag][1];
+
+		if (selmon->showbar != selmon->pertag->showbars[curtag]) {
+			selmon->showbar = selmon->pertag->showbars[curtag];
+			updatebarpos(selmon);
+			XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
+		}
+
+		if (targetmon->pertag->curtag == curtag) {
+			targetmon->nmaster = targetmon->pertag->nmasters[curtag];
+			targetmon->mfact = targetmon->pertag->mfacts[curtag];
+			targetmon->sellt = targetmon->pertag->sellts[curtag];
+			targetmon->lt[0] = targetmon->pertag->ltidxs[curtag][0];
+			targetmon->lt[1] = targetmon->pertag->ltidxs[curtag][1];
+
+			if (targetmon->showbar != targetmon->pertag->showbars[curtag]) {
+				targetmon->showbar = targetmon->pertag->showbars[curtag];
+				updatebarpos(targetmon);
+				XMoveResizeWindow(dpy, targetmon->barwin, targetmon->wx, targetmon->by, targetmon->ww, bh);
+			}
+		}
+	}
+
+	/* Refocus and rearrange */
+
+	arrange(NULL);
+
+	if (selc && ISVISIBLE(selc)) {
+		focus(selc);
+		restack(selc->mon);
+	}
 }
 
 void
