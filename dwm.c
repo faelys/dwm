@@ -92,6 +92,7 @@ struct Client {
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
 	int bw, oldbw;
+	int barx, barw;
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Client *next;
@@ -174,6 +175,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void focustitle(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static Client *getclientundermouse(void);
 static int getrootptr(int *x, int *y);
@@ -488,8 +490,12 @@ buttonpress(XEvent *e)
 			click = ClkLtSymbol;
 		else if (ev->x > selmon->ww - (int)TEXTW(stext))
 			click = ClkStatusText;
-		else
+		else {
 			click = ClkWinTitle;
+			for (c = m->clients; c; c = c->next)
+				if (c->barx >= 0 && ev->x >= c->barx && ev->x < c->barx + c->barw)
+					arg.v = c;
+		}
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
 		restack(selmon);
@@ -499,7 +505,7 @@ buttonpress(XEvent *e)
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
 		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
-			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
+			buttons[i].func((click == ClkTagBar || click == ClkWinTitle) && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
 }
 
 void
@@ -850,9 +856,14 @@ drawbar(Monitor *m)
 				mw += ew / i;
 
 			for (c = m->clients; c; c = c->next) {
-				if (!ISVISIBLE(c))
+				if (!ISVISIBLE(c)) {
+					c->barx = c->barw = -1;
 					continue;
+				}
+
 				tw = MIN(m->sel == c ? w : mw, TEXTW(c->name));
+				c->barx = x;
+				c->barw = tw;
 
 				drw_setscheme(drw, scheme[m == selmon && m->sel == c ? SchemeSel : SchemeNorm]);
 				if (tw > lrpad / 2)
@@ -984,6 +995,13 @@ focusstack(const Arg *arg)
 		focus(c);
 		restack(selmon);
 	}
+}
+
+void
+focustitle(const Arg *arg)
+{
+	focus((Client *)arg->v);
+	restack(selmon);
 }
 
 Atom
@@ -1182,6 +1200,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	c->barx = c->barw = -1;
 
 	updatetitle(c);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
