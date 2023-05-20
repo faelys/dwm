@@ -1570,6 +1570,7 @@ runautostart(void)
 	char *xdgdatahome;
 	char *home;
 	struct stat sb;
+	int result;
 
 	if ((home = getenv("HOME")) == NULL)
 		/* this is almost impossible */
@@ -1624,7 +1625,7 @@ runautostart(void)
 	}
 
 	if (access(path, X_OK) == 0)
-		system(path);
+		result = system(path);
 
 	/* now the non-blocking script */
 	if (sprintf(path, "%s/%s", pathpfx, autostartsh) <= 0) {
@@ -1633,8 +1634,9 @@ runautostart(void)
 	}
 
 	if (access(path, X_OK) == 0)
-		system(strcat(path, " &"));
+		result = system(strcat(path, " &"));
 
+	(void)result;
 	free(pathpfx);
 	free(path);
 }
