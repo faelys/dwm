@@ -192,6 +192,8 @@ static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
+static void pixeldeckcol(Monitor *m);
+static void pixelrow(Monitor *m);
 static void pop(Client *c);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
@@ -1379,6 +1381,56 @@ nexttiled(Client *c)
 {
 	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->next);
 	return c;
+}
+
+void
+pixeldeckcol(Monitor *m)
+{
+	unsigned int i, n, ty;
+	unsigned int nmaster = MIN(m->nmaster, (m->wh + pixelheight - 1) / pixelheight);
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	snprintf(m->ltsymbol, sizeof m->ltsymbol, "%s%d", selmon->lt[selmon->sellt]->symbol, n - MIN(m->nmaster, n));
+
+	for (i = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		if (i < nmaster - 1) {
+			resize(c, m->wx, m->wy + ty, pixelwidth - (2*c->bw), pixelheight - (2*c->bw), 0);
+			ty += pixelheight;
+		} else if (i == nmaster - 1) {
+			resize(c, m->wx, m->wy + ty, pixelwidth - (2*c->bw), m->wh - ty - (2*c->bw), 0);
+			ty = 0;
+		} else
+			resize(c, m->wx + pixelwidth, m->wy + ty, m->ww - pixelwidth - (2*c->bw), m->wh - (2*c->bw), 0);
+}
+
+void
+pixelrow(Monitor *m)
+{
+	unsigned int i, n, w, tx;
+	unsigned int nmaster = MIN(m->nmaster, (m->ww + pixelwidth - 1) / pixelwidth);
+	Client *c;
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if (n == 0)
+		return;
+
+	for (i = tx = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+		if (i < nmaster - 1) {
+			resize(c, m->wx + tx, m->wy, pixelwidth - (2*c->bw), pixelheight - (2*c->bw), 0);
+			tx += pixelwidth;
+		} else if (i == nmaster - 1) {
+			resize(c, m->wx + tx, m->wy, m->ww - tx - (2*c->bw), pixelheight - (2*c->bw), 0);
+			tx = 0;
+		} else {
+			w = (m->ww - tx) / (n - i);
+			resize(c, m->wx + tx, m->wy + pixelheight, w - (2*c->bw), m->wh - pixelheight - (2*c->bw), 0);
+			if (tx + WIDTH(c) < m->ww)
+				tx += WIDTH(c);
+		}
 }
 
 void

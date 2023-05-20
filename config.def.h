@@ -39,6 +39,8 @@ static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] 
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
+static const int pixelwidth  = 566;  /* Master width in pixel* layouts */
+static const int pixelheight = 846;  /* Master height in pixel* layouts */
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
@@ -46,6 +48,8 @@ static const Layout layouts[] = {
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
 	{ "[D]",      deck },
+	{ "Pr",       pixelrow },
+	{ "Pc",       pixeldeckcol },
 };
 
 /* key definitions */
@@ -89,6 +93,8 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
+	{ MODKEY|ControlMask,           XK_p,      setlayout,      {.v = &layouts[4]} },
+	{ MODKEY|ControlMask|ShiftMask, XK_p,      setlayout,      {.v = &layouts[5]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
