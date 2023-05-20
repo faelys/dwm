@@ -217,6 +217,7 @@ static void showhide(Client *c);
 static void spawn(const Arg *arg);
 static void swapclient(const Arg *arg);
 static void swapfocus(const Arg *arg);
+static void swapmon(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
@@ -1995,6 +1996,60 @@ swapfocus(const Arg *arg)
 		arrange(selmon);
 	}
 	setmark(t);
+}
+
+void
+swapmon(const Arg *arg)
+{
+	Client *c;
+	Monitor *targetmon;
+	Monitor tmp;
+
+	if (!mons->next)
+		return;
+
+	targetmon = dirtomon(arg->i);
+	tmp = *selmon;
+
+	selmon->mfact = targetmon->mfact;
+	selmon->nmaster = targetmon->nmaster;
+	selmon->seltags = targetmon->seltags;
+	selmon->sellt = targetmon->sellt;
+	selmon->tagset[0] = targetmon->tagset[0];
+	selmon->tagset[1] = targetmon->tagset[1];
+	selmon->showbar = targetmon->showbar;
+	selmon->topbar = targetmon->topbar;
+	selmon->clients = targetmon->clients;
+	selmon->sel = targetmon->sel;
+	selmon->stack = targetmon->stack;
+	selmon->lt[0] = targetmon->lt[0];
+	selmon->lt[1] = targetmon->lt[1];
+	selmon->pertag = targetmon->pertag;
+
+	targetmon->mfact = tmp.mfact;
+	targetmon->nmaster = tmp.nmaster;
+	targetmon->seltags = tmp.seltags;
+	targetmon->sellt = tmp.sellt;
+	targetmon->tagset[0] = tmp.tagset[0];
+	targetmon->tagset[1] = tmp.tagset[1];
+	targetmon->showbar = tmp.showbar;
+	targetmon->topbar = tmp.topbar;
+	targetmon->clients = tmp.clients;
+	targetmon->sel = tmp.sel;
+	targetmon->stack = tmp.stack;
+	targetmon->lt[0] = tmp.lt[0];
+	targetmon->lt[1] = tmp.lt[1];
+	targetmon->pertag = tmp.pertag;
+
+	for (c = selmon->clients; c; c = c->next)
+		c->mon = selmon;
+
+	for (c = targetmon->clients; c; c = c->next)
+		c->mon = targetmon;
+
+	arrange(selmon);
+	focus(targetmon->sel);
+	arrange(targetmon);
 }
 
 void
