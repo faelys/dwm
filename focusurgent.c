@@ -6,14 +6,15 @@ focusurgent(const Arg *arg) {
 	for(m=mons; m; m=m->next){
 		for(c=m->clients; c && !c->isurgent; c=c->next);
 		if(c) {
-			unfocus(selmon->sel, 0);
+			if (selmon->sel) unfocus(selmon->sel, 0);
 			selmon = m;
 			for(i=0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);
 			if(i < LENGTH(tags)) {
 				const Arg a = {.ui = 1 << i};
 				view(&a);
 				focus(c);
-				warp(c);
+				restack(c->mon);
+				return;
 			}
 		}
 	}
