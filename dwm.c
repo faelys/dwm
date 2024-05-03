@@ -2086,6 +2086,7 @@ swapmon(const Arg *arg)
 	if (!mons->next)
 		return;
 
+	unfocus(selmon->sel, 1);
 	targetmon = dirtomon(arg->i);
 	tmp = *selmon;
 
@@ -2126,8 +2127,8 @@ swapmon(const Arg *arg)
 		c->mon = targetmon;
 
 	arrange(selmon);
-	focus(targetmon->sel);
 	arrange(targetmon);
+	focus(getclientundermouse());
 }
 
 void
@@ -2136,7 +2137,6 @@ swapmonvisible(const Arg *arg)
 	Client **tc, *c;
 	Client *firstnew = NULL;
 	Client **dest;
-	Client *selc = selmon->sel;
 	Monitor *targetmon;
 	unsigned int tagset = selmon->tagset[selmon->seltags];
 
@@ -2277,11 +2277,8 @@ swapmonvisible(const Arg *arg)
 	/* Refocus and rearrange */
 
 	arrange(NULL);
-
-	if (selc && ISVISIBLE(selc)) {
-		focus(selc);
-		restack(selc->mon);
-	}
+	focus(getclientundermouse());
+	// drawbars(); needed?
 }
 
 void
