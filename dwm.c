@@ -2560,6 +2560,7 @@ updategeom(void)
 	if (XineramaIsActive(dpy)) {
 		int i, j, n, nn;
 		Client *c;
+		Client **tc;
 		Monitor *m;
 		XineramaScreenInfo *info = XineramaQueryScreens(dpy, &nn);
 		XineramaScreenInfo *unique = NULL;
@@ -2597,13 +2598,16 @@ updategeom(void)
 		/* removed monitors if n > nn */
 		for (i = nn; i < n; i++) {
 			for (m = mons; m && m->next; m = m->next);
-			while ((c = m->clients)) {
+			if (m->clients) {
 				dirty = 1;
-				m->clients = c->next;
-				detachstack(c);
-				c->mon = mons;
-				attach(c);
-				attachstack(c);
+				for (c = m->clients; c; c = c->next)
+					c->mon = mons;
+				for (tc = &mons->clients; *tc; tc = &(*tc)->next);
+				*tc = m->clients;
+				m->clients = NULL;
+				for (tc = &mons->stack; *tc; tc = &(*tc)->snext);
+				*tc = m->stack;
+				m->stack = NULL;
 			}
 			if (m == selmon)
 				selmon = mons;
