@@ -41,6 +41,8 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 static const int pixelwidth  = 566;  /* Master width in pixel* layouts */
 static const int pixelheight = 846;  /* Master height in pixel* layouts */
+static const int pixelwidthmin  = 8;  /* Minimal column width in pixel* layouts */
+static const int pixelheightmin = 8;  /* Minimal row height in pixel* layouts */
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
