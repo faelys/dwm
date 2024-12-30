@@ -1391,11 +1391,17 @@ nexttiled(Client *c)
 void
 pixeldeckcol(Monitor *m)
 {
-	unsigned int i, n, tx, ty;
-	unsigned int nrows = (m->wh + pixelheight - pixelheightmin) / pixelheight;
+	unsigned int i, n, h, tx, ty;
+	unsigned int nrows = m->wh / pixelheight;
+	unsigned int has_bottom = nrows * pixelheight + pixelheightmin < m->wh;
 	unsigned int ncols = (m->ww - pixelwidthmin) / pixelwidth;
 	unsigned int nmaster = MIN(m->nmaster, nrows * ncols);
 	Client *c;
+
+	if (nmaster == 0) {
+		monocle(m);
+		return;
+	}
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
@@ -1403,58 +1409,77 @@ pixeldeckcol(Monitor *m)
 
 	snprintf(m->ltsymbol, sizeof m->ltsymbol, "%s%d", selmon->lt[selmon->sellt]->symbol, n - MIN(m->nmaster, n));
 
-	for (i = tx = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-		if (i < nmaster - 1) {
-			if (ty + pixelheight + pixelheightmin >= m->wh) {
-				resize(c, m->wx + tx, m->wy + ty, pixelwidth - (2*c->bw), m->wh - ty - (2*c->bw), 0);
+	for (i = tx = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++) {
+
+		if (i < nmaster) {
+			h = (has_bottom ? pixelheight : (m->wh - ty) / (nrows - i % nrows));
+			resize(c, m->wx + tx, m->wy + ty, pixelwidth - (2*c->bw), h - (2 * c->bw), 0);
+			ty += h;
+
+			if ((i + 1) % nrows == 0) {
 				tx += pixelwidth;
 				ty = 0;
-			} else {
-				resize(c, m->wx + tx, m->wy + ty, pixelwidth - (2*c->bw), pixelheight - (2*c->bw), 0);
-				ty += pixelheight;
 			}
-		} else if (i == nmaster - 1) {
+		} else if (has_bottom && i < nmaster + nmaster / nrows) {
+			resize(c, m->wx + (i - nmaster) * pixelwidth, m->wy + nrows * pixelheight, pixelwidth - (2*c->bw), m->wh - nrows * pixelheight - (2*c->bw), 0);
+		} else if (ty > 0) {
 			resize(c, m->wx + tx, m->wy + ty, pixelwidth - (2*c->bw), m->wh - ty - (2*c->bw), 0);
 			tx += pixelwidth;
 			ty = 0;
 		} else
 			resize(c, m->wx + tx, m->wy + ty, m->ww - tx - (2*c->bw), m->wh - ty - (2*c->bw), 0);
+	}
 }
 
 void
 pixelrow(Monitor *m)
 {
-	unsigned int i, n, w, h, tx, ty;
-	unsigned int nrows = (m->wh + pixelheight - pixelheightmin) / pixelheight;
-	unsigned int ncols = (m->ww + pixelwidth - pixelwidthmin) / pixelwidth;
-	unsigned int nmaster = MIN(m->nmaster, nrows * ncols - 1);
+	unsigned int i, n, w, h, tx, ty, tt;
+	unsigned int nrows = m->wh / pixelheight;
+	unsigned int has_bottom = nrows * pixelheight + pixelheightmin < m->wh;
+	unsigned int ncols = m->ww / pixelwidth;
+	unsigned int has_right = ncols * pixelwidth + pixelwidthmin < m->ww;
+	unsigned int nmaster = MIN(m->nmaster, nrows * ncols - (has_bottom ? 0 : 1));
 	Client *c;
+
+	if (nrows == 0 || ncols == 0) {
+		tile(m);
+		return;
+	}
 
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
 		return;
 
-	for (i = tx = ty = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++) {
-		h = (ty + pixelheight + pixelheightmin >= m->wh ? m->wh - ty : pixelheight) - (2*c->bw);
+	for (i = tx = ty = tt = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++) {
+		if (i < nmaster) {
+			w = (has_right ? pixelwidth : (m->ww - tx) / (ncols - i % ncols));
+			h = (has_bottom ? pixelheight : (m->wh - ty) / (nrows - i / ncols));
+			resize(c, m->wx + tx, m->wy + ty, w - (2*c->bw), h - (2 * c->bw), 0);
+			tx += w;
 
-		if (i == nmaster - 1 && ty + pixelheight + pixelheightmin < m->wh) {
-			resize(c, m->wx + tx, m->wy + ty, m->ww - tx - (2*c->bw), h, 0);
-			tx = 0;
-			ty += pixelheight;
-		} else if (i < nmaster) {
-			if (tx + pixelwidth + pixelwidthmin >= m->ww) {
-				resize(c, m->wx + tx, m->wy + ty, m->ww - ty - (2*c->bw), h, 0);
+			if ((i + 1) % ncols == 0) {
 				tx = 0;
-				ty += pixelheight;
-			} else {
-				resize(c, m->wx + tx, m->wy + ty, pixelwidth - (2*c->bw), h, 0);
-				tx += pixelwidth;
+				ty += h;
 			}
+			if (i + 1 == nmaster && !has_bottom) {
+				tt = tx;
+				tx = 0;
+			}
+		} else if (has_right && i < nmaster + nmaster / ncols) {
+			h = (ty - tt) / (nmaster + nmaster / ncols - i);
+			resize(c, m->wx + ncols * pixelwidth, m->wy + tt, m->ww - ncols * pixelwidth - (2*c->bw), h, 0);
+			if (tt + h < ty) tt += h;
+			if (i + 1 == nmaster + nmaster / ncols)
+				tt = 0;
+		} else if (tx > 0) {
+			resize(c, m->wx + tx, m->wy + ty, m->ww - tx - (2*c->bw), pixelheight - (2*c->bw), 0);
+			tx = tt = 0;
+			ty += pixelheight;
 		} else {
-			w = (m->ww - tx) / (n - i);
-			resize(c, m->wx + tx, m->wy + ty, w - (2*c->bw), m->wh - ty - (2*c->bw), 0);
-			if (tx + WIDTH(c) < m->ww)
-				tx += WIDTH(c);
+			w = (m->ww - tt) / (n - i);
+			resize(c, m->wx + tt, m->wy + ty, w - (2*c->bw), m->wh - ty - (2*c->bw), 0);
+			if (tt + w < m->ww) tt += w;
 		}
 	}
 }
